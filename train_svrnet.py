@@ -76,7 +76,7 @@ ARGPARSER.add_argument(
     help="Runs an evaluation before the first training iteration.")
 # multi-gpu systems
 ARGPARSER.add_argument(
-    '--cuda', type=str, default='0',
+    '--gpu', type=str, default='0',
     help='Specify default GPU to use.')
 
 
@@ -91,7 +91,7 @@ def _parse_function_ifind(serialized_example):
             'AP2'   : tf.FixedLenFeature([], tf.string),
             'AP3'   : tf.FixedLenFeature([], tf.string)})
 
-    image   = tf.reshape(tf.decode_raw(features['image'], tf.float32),[120,120,1])
+    image   = tf.reshape(tf.decode_raw(features['image'], tf.float32),[120,120,1]) * 255.
     vec     = tf.reshape(tf.decode_raw(features['vec'], tf.float32),[3])
     qt      = tf.reshape(tf.decode_raw(features['qt'], tf.float32),[4])
     AP1     = tf.reshape(tf.decode_raw(features['AP1'], tf.float32),[3])
@@ -180,23 +180,23 @@ def main(argv):
 
     elif FLAGS.loss == 'SE3':
 
-        import os, sys
-        os.environ['GEOMSTATS_BACKEND'] = 'tensorflow'  # NOQA
-        sys.path.append('/vol/medic01/users/bh1511/_build/geomstats/')
+        from se3_geodesic_loss import SE3GeodesicLoss
 
-        import geomstats.lie_group as lie_group
-        from geomstats.special_euclidean_group import SpecialEuclideanGroup
+        SE3_DIM = 6
 
-        SE3_GROUP = SpecialEuclideanGroup(3, epsilon=np.finfo(np.float32).eps)
-        metric = SE3_GROUP.left_canonical_metric
+        se3_weights = np.ones(SE3_DIM)
+        # SE3 Weights for KingsCollege Dataset:
+        # se3_weights = np.array([0.10365969, 0.8886924 , 0.44658741, 0.00119115, 0.00290206, 0.0055068 ])
+        loss = SE3GeodesicLoss(se3_weights)
 
-        y_pred, _ = inception.inception_v3(image, num_classes=6)
-        y_pred = tf.concat((tf.nn.tanh(y_pred[:, :3]), y_pred[:, 3:]), axis=1)
+        y_pred, _ = inception.inception_v3(image, num_classes=SE3_DIM)
+        y_pred.set_shape([FLAGS.batch_size,SE3_DIM])
+
         y_true = tf.concat((vec,AP2),axis=1)
-        y_pred.set_shape([FLAGS.batch_size,6])
-        y_true.set_shape([FLAGS.batch_size,6])
+        y_true.set_shape([FLAGS.batch_size,SE3_DIM])
+
         with tf.variable_scope('SE3_loss'):
-            loss = tf.reduce_mean(lie_group.loss(y_pred, y_true, SE3_GROUP, metric))
+            loss = loss.geodesic_loss(y_pred, y_true)
 
     else:
         print('Invalid Option:',FLAGS.loss)
@@ -280,7 +280,7 @@ if __name__ == '__main__':
         tf.logging.set_verbosity(tf.logging.ERROR)
 
     # GPU allocation options
-    os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.cuda
+    os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.gpu
 
     # using the Winograd non-fused algorithms provides a small performance boost
     os.environ['TF_ENABLE_WINOGRAD_NONFUSED'] = '1'
