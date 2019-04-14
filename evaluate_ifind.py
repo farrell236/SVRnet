@@ -113,7 +113,7 @@ def _parse_function_ifind(serialized_example):
             'AP2'   : tf.FixedLenFeature([], tf.string),
             'AP3'   : tf.FixedLenFeature([], tf.string)})
 
-    image   = tf.reshape(tf.decode_raw(features['image'], tf.float32),[120,120,1]) #* 255.
+    image   = tf.reshape(tf.decode_raw(features['image'], tf.float32),[120,120,1]) * 255.
     vec     = tf.reshape(tf.decode_raw(features['vec'], tf.float32),[3])
     qt      = tf.reshape(tf.decode_raw(features['qt'], tf.float32),[4])
     AP1     = tf.reshape(tf.decode_raw(features['AP1'], tf.float32),[3])

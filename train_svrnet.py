@@ -148,7 +148,7 @@ def main(argv):
     # Network Definition
 
     image = tf.image.resize_images(image, size=[224, 224])
-    tf.summary.image('input',image,max_outputs=30)
+    # tf.summary.image('input',image,max_outputs=30)
 
     if FLAGS.loss == 'PoseNet':
 
