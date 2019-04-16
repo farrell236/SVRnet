@@ -15,6 +15,8 @@ from geomstats.invariant_metric import InvariantMetric
 from geomstats.special_orthogonal_group import SpecialOrthogonalGroup
 from geomstats.special_euclidean_group import SpecialEuclideanGroup
 
+np.set_printoptions(linewidth=255, suppress=True)
+
 # command line argument parser
 ARGPARSER = argparse.ArgumentParser(
     description='Evaluate SVRnet KingsCollege')
@@ -84,6 +86,8 @@ def main(argv):
 
         i = 0
 
+        results = []
+
         try:
 
             while True:
@@ -97,11 +101,17 @@ def main(argv):
                 theta = 2. * np.arccos(d) * 180. / np.pi
                 error_x = np.linalg.norm(_translation_true - _translation_pred)
 
+                results.append([error_x, theta])
+
                 print('Iteration:', i, 'Error XYZ (m):', error_x, 'Error Q (degrees):', theta)
                 i = i + 1
 
         except tf.errors.OutOfRangeError:
             print('End of Test Data')
+
+        results = np.stack(results)
+        results = np.median(results, axis=0)
+        print(results)
 
 
     elif FLAGS.loss == 'SE3':
@@ -120,6 +130,7 @@ def main(argv):
 
         i = 0
 
+        results = []
         _y_pred_i = []
         _y_true_i = []
         _se3_err_i = []
@@ -139,6 +150,7 @@ def main(argv):
                 d = abs(np.sum(np.multiply(q1, q2)))
                 theta = 2. * np.arccos(d) * 180. / np.pi
                 error_x = np.linalg.norm(_tvec - _y_pred[0,3:])
+                results.append([error_x, theta])
 
                 # SE3 compute
                 _y_true = np.concatenate((_rvec,_tvec),axis=-1)
@@ -160,6 +172,9 @@ def main(argv):
         err_weights = np.diag(np.linalg.inv(np.cov(err_vec.T)))
         err_weights = err_weights / np.linalg.norm(err_weights)
         print(err_weights)
+        results = np.stack(results)
+        results = np.median(results, axis=0)
+        print(results)
 
     else:
         print('Invalid Option:',FLAGS.loss)

@@ -184,9 +184,10 @@ def main(argv):
 
         SE3_DIM = 6
 
-        se3_weights = np.ones(SE3_DIM)
-        # SE3 Weights for KingsCollege Dataset:
+        # SE3 Training Weights for KingsCollege Dataset:
+        se3_weights = np.ones(SE3_DIM) # Default
         # se3_weights = np.array([0.10365969, 0.8886924 , 0.44658741, 0.00119115, 0.00290206, 0.0055068 ])
+        # se3_weights = np.array([0.77848403 0.6148858  0.12600519 0.00018093 0.00020279 0.00082466])
         loss = SE3GeodesicLoss(se3_weights)
 
         y_pred, _ = inception.inception_v3(image, num_classes=SE3_DIM)
