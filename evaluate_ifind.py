@@ -138,10 +138,17 @@ def main(argv):
     subject_path = FLAGS.scan_dir + '/test/' + FLAGS.subject_id + '.nii.gz'
     fixed_image_sitk_tmp    = sitk.ReadImage(subject_path, sitk.sitkFloat32)
     fixed_image_sitk        = sitk.GetImageFromArray(sitk.GetArrayFromImage(fixed_image_sitk_tmp))
-    fixed_image_sitk        = sitk.RescaleIntensity(fixed_image_sitk, 0, 1) # * 255.
+    fixed_image_sitk        = sitk.RescaleIntensity(fixed_image_sitk, 0, 1) * 255.
 
     # Network Definition
     image_resized = tf.image.resize_images(image, size=[224, 224])
+
+    # Measurements
+    cc = []
+    mse = []
+    psnr = []
+    ssim = []
+
 
     if FLAGS.loss == 'PoseNet':
 
@@ -170,10 +177,11 @@ def main(argv):
             imageio.imsave('imgdump/image_{}_true.png'.format(i),_image[0,...])
             imageio.imsave('imgdump/image_{}_pred.png'.format(i),image_pred)
 
-            calc_psnr(image_pred, image_true)
-            calc_mse(image_pred, image_true)
-            calc_ssim(image_pred, image_true)
-            calc_correlation(image_pred, image_true)
+            cc.append(calc_correlation(image_pred, image_true))
+            mse.append(calc_mse(image_pred, image_true))
+            psnr.append(calc_psnr(image_pred, image_true))
+            ssim.append(calc_ssim(image_pred, image_true))
+
 
     elif FLAGS.loss == 'AP':
 
@@ -204,10 +212,10 @@ def main(argv):
             imageio.imsave('imgdump/image_{}_true.png'.format(i),_image[0,...])
             imageio.imsave('imgdump/image_{}_pred.png'.format(i),image_pred)
 
-            calc_psnr(image_pred, image_true)
-            calc_mse(image_pred, image_true)
-            calc_ssim(image_pred, image_true)
-            calc_correlation(image_pred, image_true)
+            cc.append(calc_correlation(image_pred, image_true))
+            mse.append(calc_mse(image_pred, image_true))
+            psnr.append(calc_psnr(image_pred, image_true))
+            ssim.append(calc_ssim(image_pred, image_true))
 
 
     elif FLAGS.loss == 'SE3':
@@ -236,14 +244,25 @@ def main(argv):
             imageio.imsave('imgdump/image_{}_true.png'.format(i),_image[0,...])
             imageio.imsave('imgdump/image_{}_pred.png'.format(i),image_pred)
 
-            calc_psnr(image_pred, image_true)
-            calc_mse(image_pred, image_true)
-            calc_ssim(image_pred, image_true)
-            calc_correlation(image_pred, image_true)
+            cc.append(calc_correlation(image_pred, image_true))
+            mse.append(calc_mse(image_pred, image_true))
+            psnr.append(calc_psnr(image_pred, image_true))
+            ssim.append(calc_ssim(image_pred, image_true))
+
 
     else:
         print('Invalid Option:',FLAGS.loss)
         raise SystemExit
+
+    cc = np.stack(cc)
+    mse = np.stack(mse)
+    psnr = np.stack(psnr)
+    ssim = np.stack(ssim)
+
+    print('CC:', np.median(cc))
+    print('MSE:', np.median(mse))
+    print('PSNR:', np.median(psnr))
+    print('SSIM:', np.median(ssim))
 
 
 if __name__ == '__main__':

@@ -111,7 +111,7 @@ def main(argv):
 
         results = np.stack(results)
         results = np.median(results, axis=0)
-        print(results)
+        print('Error XYZ (m):', results[0], 'Error Q (degrees):', results[1])
 
 
     elif FLAGS.loss == 'SE3':
@@ -174,7 +174,7 @@ def main(argv):
         print(err_weights)
         results = np.stack(results)
         results = np.median(results, axis=0)
-        print(results)
+        print('Error XYZ (m):', results[0], 'Error Q (degrees):', results[1])
 
     else:
         print('Invalid Option:',FLAGS.loss)

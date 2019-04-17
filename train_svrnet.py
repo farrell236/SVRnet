@@ -26,7 +26,7 @@ ARGPARSER.add_argument(
     help='The path to the dataset directory.')
 ARGPARSER.add_argument(
     '--dataset', type=str, default='ifind',
-    help='The name of the GQN dataset to use. \
+    help='The name of the dataset to use. \
     Available names are: ifind | kingscollege | tum')
 ARGPARSER.add_argument(
     '--model_dir', type=str, default='/tmp/models/SVRnet',
@@ -47,7 +47,7 @@ ARGPARSER.add_argument(
     Available loss are: AP | PoseNet | SE3')
 # snapshot parameters
 ARGPARSER.add_argument(
-    '--chkpt_steps', type=int, default=1000,
+    '--ckpt_steps', type=int, default=1000,
     help='Number of steps between checkpoint saves.')
 # memory management
 ARGPARSER.add_argument(
@@ -186,7 +186,6 @@ def main(argv):
 
         # SE3 Training Weights for KingsCollege Dataset:
         se3_weights = np.ones(SE3_DIM) # Default
-        # se3_weights = np.array([0.10365969, 0.8886924 , 0.44658741, 0.00119115, 0.00290206, 0.0055068 ])
         # se3_weights = np.array([0.77848403, 0.6148858 , 0.12600519, 0.00018093, 0.00020279, 0.00082466])
         loss = SE3GeodesicLoss(se3_weights)
 
