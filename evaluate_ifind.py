@@ -7,12 +7,14 @@ import imageio
 import os
 import sys
 
+import tqdm
 import numpy as np
 import SimpleITK as sitk
 import tensorflow as tf
 
 from tensorflow.contrib.slim.python.slim.nets import inception
 from geomstats.special_orthogonal_group import SpecialOrthogonalGroup
+from geomstats.special_euclidean_group import SpecialEuclideanGroup
 from evaluate_quality_img import (
     calc_psnr, calc_ssim, calc_mse, calc_correlation)
 
@@ -27,7 +29,7 @@ ARGPARSER.add_argument(
     '--scan_dir', type=str, default='/tmp/data/ifind-dataset',
     help='The path to the nifti volume directory.')
 ARGPARSER.add_argument(
-    '--subject_id', type=str, default='recon-ifind00080',
+    '--subject_id', type=str, default='recon-ifind00063',
     help='Subject ID to evaluate')
 ARGPARSER.add_argument(
     '--model_dir', type=str, default='/tmp/models/SVRnet',
@@ -37,7 +39,7 @@ ARGPARSER.add_argument(
     help='The loss function used. \
     Available loss are: AP | PoseNet | SE3')
 ARGPARSER.add_argument(
-    '--n_iter', type=int, default=100,
+    '--n_iter', type=int, default=1000,
     help='The number of epochs to train.')
 ARGPARSER.add_argument(
     '--debug', default=False, action='store_true',
@@ -163,7 +165,7 @@ def main(argv):
 
         SO3_GROUP = SpecialOrthogonalGroup(3)
 
-        for i in range(FLAGS.n_iter):
+        for i in tqdm.tqdm(range(FLAGS.n_iter)):
 
             _image, _quaternion_true, _translation_true, _quaternion_pred, _translation_pred = \
                 sess.run([image, qt, AP2, quaternion_pred, translation_pred])
@@ -174,8 +176,8 @@ def main(argv):
             image_true = np.squeeze(_image)
             image_pred = resample_sitk(fixed_image_sitk, rx, tx)
 
-            imageio.imsave('imgdump/image_{}_true.png'.format(i),_image[0,...])
-            imageio.imsave('imgdump/image_{}_pred.png'.format(i),image_pred)
+            imageio.imsave('imgdump/image_{}_true.png'.format(i), np.uint8(_image[0, ...]))
+            imageio.imsave('imgdump/image_{}_pred.png'.format(i), np.uint8(image_pred))
 
             cc.append(calc_correlation(image_pred, image_true))
             mse.append(calc_mse(image_pred, image_true))
@@ -194,7 +196,7 @@ def main(argv):
         tf.train.Saver().restore(sess, ckpt_file)
         print('restoring parameters from', ckpt_file)
 
-        for i in range(FLAGS.n_iter):
+        for i in tqdm.tqdm(range(FLAGS.n_iter)):
 
             _image, _AP1, _AP2, _AP3, _AP1_pred, _AP2_pred, _AP3_pred = \
                 sess.run([image, AP1, AP2, AP3, AP1_pred, AP2_pred, AP3_pred])
@@ -209,8 +211,8 @@ def main(argv):
             image_true = np.squeeze(_image)
             image_pred = resample_sitk(fixed_image_sitk, rx, tx)
 
-            imageio.imsave('imgdump/image_{}_true.png'.format(i),_image[0,...])
-            imageio.imsave('imgdump/image_{}_pred.png'.format(i),image_pred)
+            imageio.imsave('imgdump/image_{}_true.png'.format(i), np.uint8(_image[0, ...]))
+            imageio.imsave('imgdump/image_{}_pred.png'.format(i), np.uint8(image_pred))
 
             cc.append(calc_correlation(image_pred, image_true))
             mse.append(calc_mse(image_pred, image_true))
@@ -229,8 +231,10 @@ def main(argv):
         print('restoring parameters from', ckpt_file)
 
         SO3_GROUP = SpecialOrthogonalGroup(3)
+        SE3_GROUP = SpecialEuclideanGroup(3)
+        _se3_err_i = []
 
-        for i in range(FLAGS.n_iter):
+        for i in tqdm.tqdm(range(FLAGS.n_iter)):
 
             _image, _rvec, _tvec, _y_pred = \
                 sess.run([image, vec, AP2, y_pred])
@@ -241,14 +245,21 @@ def main(argv):
             image_true = np.squeeze(_image)
             image_pred = resample_sitk(fixed_image_sitk, rx, tx)
 
-            imageio.imsave('imgdump/image_{}_true.png'.format(i),_image[0,...])
-            imageio.imsave('imgdump/image_{}_pred.png'.format(i),image_pred)
+            imageio.imsave('imgdump/image_{}_true.png'.format(i), np.uint8(_image[0, ...]))
+            imageio.imsave('imgdump/image_{}_pred.png'.format(i), np.uint8(image_pred))
 
             cc.append(calc_correlation(image_pred, image_true))
             mse.append(calc_mse(image_pred, image_true))
             psnr.append(calc_psnr(image_pred, image_true))
             ssim.append(calc_ssim(image_pred, image_true))
 
+            _y_true = np.concatenate((_rvec, _tvec), axis=-1)
+            _se3_err_i.append(SE3_GROUP.compose(SE3_GROUP.inverse(_y_true), _y_pred))
+
+        err_vec = np.vstack(_se3_err_i)
+        err_weights = np.diag(np.linalg.inv(np.cov(err_vec.T)))
+        err_weights = err_weights / np.linalg.norm(err_weights)
+        print(err_weights)
 
     else:
         print('Invalid Option:',FLAGS.loss)

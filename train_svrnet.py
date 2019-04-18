@@ -186,7 +186,8 @@ def main(argv):
 
         # SE3 Training Weights for KingsCollege Dataset:
         se3_weights = np.ones(SE3_DIM) # Default
-        # se3_weights = np.array([0.77848403, 0.6148858 , 0.12600519, 0.00018093, 0.00020279, 0.00082466])
+        # se3_weights = np.array([0.77848403, 0.6148858 , 0.12600519, 0.00018093, 0.00020279, 0.00082466]) # KingsCollege
+        # se3_weights = np.array([0.06126877, 0.0811294 , 0.10352387, 0.65171058, 0.73758907, 0.10090916]) # iFIND
         loss = SE3GeodesicLoss(se3_weights)
 
         y_pred, _ = inception.inception_v3(image, num_classes=SE3_DIM)
@@ -245,7 +246,7 @@ def main(argv):
                     print(format_str % (datetime.now(), step, loss_value,
                                         examples_per_sec, duration))
 
-                if step % FLAGS.chkpt_steps == 0:
+                if step % FLAGS.ckpt_steps == 0:
                     tf.logging.log(tf.logging.INFO, 'Saving Iteration: {}'.format(step))
                     saver.save(sess, FLAGS.model_dir + '/iter_{}.ckpt'.format(step))
 
